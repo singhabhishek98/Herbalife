@@ -1,9 +1,11 @@
 import { Modal, Form, Input, Select, DatePicker, Radio } from 'antd';
 import dayjs from 'dayjs';
-import { plans, teams } from '../data/mockData';
+import { plans } from '../data/mockData';
 
-export default function MemberFormModal({ open, onCancel, onSubmit, editing }) {
+export default function MemberFormModal({ open, onCancel, onSubmit, editing, isAdmin, visibleTeams, currentUser }) {
   const [form] = Form.useForm();
+  const teamOptions = visibleTeams.map((team) => ({ value: team.id, label: team.name }));
+  const defaultTeamId = editing?.teamId ?? (isAdmin ? visibleTeams[0]?.id : currentUser.teamId);
 
   return (
     <Modal
@@ -23,7 +25,7 @@ export default function MemberFormModal({ open, onCancel, onSubmit, editing }) {
           startDate: dayjs(editing.startDate),
           planId: editing.planId,
           teamId: editing.teamId
-        } : { teamId: 1, planId: 3, paymentStatus: 'Paid', startDate: dayjs() }}
+        } : { teamId: defaultTeamId, planId: 3, paymentStatus: 'Paid', startDate: dayjs() }}
         onFinish={(values) => onSubmit({
           ...values,
           startDate: values.startDate.format('YYYY-MM-DD')
@@ -36,7 +38,7 @@ export default function MemberFormModal({ open, onCancel, onSubmit, editing }) {
           <Input placeholder="9876543210" maxLength={10} />
         </Form.Item>
         <Form.Item name="teamId" label="Team Head" rules={[{ required: true }]}>
-          <Select options={teams.map(t => ({ value: t.id, label: t.name }))} />
+          <Select disabled={!isAdmin} options={teamOptions} />
         </Form.Item>
         <Form.Item name="planId" label="Subscription Plan" rules={[{ required: true }]}>
           <Select options={plans.map(p => ({ value: p.id, label: `${p.name} - ₹${p.pricePerDay} x ${p.days} = ₹${p.total}` }))} />

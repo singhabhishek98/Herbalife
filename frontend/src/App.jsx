@@ -15,6 +15,12 @@ import MemberCard from './components/MemberCard';
 import MemberFormModal from './components/MemberFormModal';
 import RenewModal from './components/RenewModal';
 
+const currentUser = {
+  name: 'Manish',
+  role: 'head',
+  teamId: 1
+};
+
 export default function App() {
   const [active, setActive] = useState('dashboard');
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -30,35 +36,49 @@ export default function App() {
     { id: 4, memberId: 104, date: '2026-07-02' },
     { id: 5, memberId: 105, date: '2026-07-01' }
   ]);
+  const isAdmin = currentUser.role === 'admin';
+  const visibleTeams = useMemo(
+    () => (isAdmin ? teams : teams.filter((team) => team.id === currentUser.teamId)),
+    [isAdmin]
+  );
+  const visibleMembers = useMemo(
+    () => (isAdmin ? members : members.filter((member) => member.teamId === currentUser.teamId)),
+    [isAdmin, members]
+  );
 
   const filteredMembers = useMemo(() => {
-    return members.filter((m) => {
+    return visibleMembers.filter((m) => {
       const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.mobile.includes(search);
       const matchesTeam = selectedTeam ? m.teamId === selectedTeam.id : true;
       return matchesSearch && matchesTeam;
     });
-  }, [members, search, selectedTeam]);
+  }, [search, selectedTeam, visibleMembers]);
 
   const summary = useMemo(() => {
-    const todayVisits = visitLog.filter((v) => v.date === today()).length || 18;
-    const expiring = members.filter((m) => m.remainingDays > 0 && m.remainingDays <= 5).length;
-    const expired = members.filter((m) => m.remainingDays <= 0).length;
-    const collection = members.reduce((sum, m) => sum + (m.paymentStatus === 'Paid' ? getPlan(m.planId).total : 0), 0);
+    const visibleMemberIds = new Set(visibleMembers.map((member) => member.id));
+    const todayVisits = visitLog.filter((v) => v.date === today() && visibleMemberIds.has(v.memberId)).length || 18;
+    const expiring = visibleMembers.filter((m) => m.remainingDays > 0 && m.remainingDays <= 5).length;
+    const expired = visibleMembers.filter((m) => m.remainingDays <= 0).length;
+    const collection = visibleMembers.reduce((sum, m) => sum + (m.paymentStatus === 'Paid' ? getPlan(m.planId).total : 0), 0);
     return { todayVisits, expiring, expired, collection };
-  }, [members, visitLog]);
+  }, [visibleMembers, visitLog]);
 
   const openAdd = () => { setEditingMember(null); setMemberModal(true); };
   const openEdit = (member) => { setEditingMember(member); setMemberModal(true); };
 
   const handleSubmitMember = (values) => {
     const plan = getPlan(values.planId);
+    const scopedValues = {
+      ...values,
+      teamId: isAdmin ? values.teamId : currentUser.teamId
+    };
     if (editingMember) {
-      setMembers((prev) => prev.map((m) => m.id === editingMember.id ? { ...m, ...values, remainingDays: m.remainingDays || plan.days } : m));
+      setMembers((prev) => prev.map((m) => m.id === editingMember.id ? { ...m, ...scopedValues, remainingDays: m.remainingDays || plan.days } : m));
       message.success('Member updated successfully');
     } else {
       setMembers((prev) => [{
         id: Date.now(),
-        ...values,
+        ...scopedValues,
         remainingDays: plan.days,
         lastVisit: '',
         avatar: ''
@@ -94,7 +114,7 @@ export default function App() {
     message.success('Plan renewed successfully');
   };
 
-  const endingSoon = [...members].filter((m) => m.remainingDays <= 5).sort((a, b) => a.remainingDays - b.remainingDays);
+  const endingSoon = [...visibleMembers].filter((m) => m.remainingDays <= 5).sort((a, b) => a.remainingDays - b.remainingDays);
 
   const goTeam = (team) => {
     setSelectedTeam(team);
@@ -103,16 +123,16 @@ export default function App() {
 
   return (
     <div className="appShell">
-      <Sidebar active={active} onChange={(key) => { setActive(key); if (key !== 'members') setSelectedTeam(null); }} />
+      <Sidebar active={active} isAdmin={isAdmin} onChange={(key) => { setActive(key); if (key !== 'members') setSelectedTeam(null); }} />
 
       <main className="mainArea">
         <MobileTop active={active} selectedTeam={selectedTeam} onBack={() => { setSelectedTeam(null); setActive('teams'); }} />
 
         {active === 'dashboard' && (
-          <Dashboard summary={summary} members={members} endingSoon={endingSoon} onAdd={openAdd} onMark={handleMarkPresent} onRenew={setRenewMember} onTeam={goTeam} />
+          <Dashboard summary={summary} members={visibleMembers} visibleTeams={visibleTeams} endingSoon={endingSoon} onAdd={openAdd} onMark={handleMarkPresent} onRenew={setRenewMember} onTeam={goTeam} />
         )}
 
-        {active === 'teams' && <TeamsView members={members} onTeam={goTeam} />}
+        {active === 'teams' && <TeamsView members={visibleMembers} visibleTeams={visibleTeams} onTeam={goTeam} />}
 
         {(active === 'members' || active === 'visits' || active === 'alerts') && (
           <MembersView
@@ -128,13 +148,13 @@ export default function App() {
           />
         )}
 
-        {(active === 'reports' || active === 'payments') && <ReportsView members={members} visitLog={visitLog} />}
+        {(active === 'reports' || active === 'payments') && <ReportsView members={visibleMembers} visitLog={visitLog.filter((v) => visibleMembers.some((m) => m.id === v.memberId))} />}
         {(active === 'profile' || active === 'settings') && <ProfileView />}
       </main>
 
       <BottomNav active={active} onChange={(key) => { setActive(key); if (key !== 'members') setSelectedTeam(null); }} onAdd={openAdd} />
 
-      <MemberFormModal open={memberModal} editing={editingMember} onCancel={() => setMemberModal(false)} onSubmit={handleSubmitMember} />
+      <MemberFormModal open={memberModal} editing={editingMember} isAdmin={isAdmin} visibleTeams={visibleTeams} currentUser={currentUser} onCancel={() => setMemberModal(false)} onSubmit={handleSubmitMember} />
       <RenewModal open={!!renewMember} member={renewMember} onCancel={() => setRenewMember(null)} onSubmit={handleRenew} />
     </div>
   );
@@ -151,7 +171,7 @@ function MobileTop({ active, selectedTeam, onBack }) {
   );
 }
 
-function Dashboard({ summary, members, endingSoon, onAdd, onMark, onRenew, onTeam }) {
+function Dashboard({ summary, members, visibleTeams, endingSoon, onAdd, onMark, onRenew, onTeam }) {
   return (
     <div className="page dashboardPage">
       <div className="desktopHeader">
@@ -188,7 +208,7 @@ function Dashboard({ summary, members, endingSoon, onAdd, onMark, onRenew, onTea
 
         <div className="panel teamsPreview">
           <div className="panelHead"><h3>Team Members</h3><Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>Add Member</Button></div>
-          {teams.map((team) => {
+          {visibleTeams.map((team) => {
             const teamMembers = members.filter((m) => m.teamId === team.id);
             const expiring = teamMembers.filter((m) => m.remainingDays <= 5).length;
             return <button className="teamRow" key={team.id} onClick={() => onTeam(team)}>
@@ -208,11 +228,11 @@ function Dashboard({ summary, members, endingSoon, onAdd, onMark, onRenew, onTea
   );
 }
 
-function TeamsView({ members, onTeam }) {
+function TeamsView({ members, visibleTeams, onTeam }) {
   return <div className="page narrowPage">
     <Input prefix={<SearchOutlined />} placeholder="Search team member..." className="searchBox" />
     <div className="teamList">
-      {teams.map((team) => {
+      {visibleTeams.map((team) => {
         const teamMembers = members.filter((m) => m.teamId === team.id);
         const expiring = teamMembers.filter((m) => m.remainingDays <= 5).length;
         return <button className="teamCard" key={team.id} onClick={() => onTeam(team)}>
@@ -284,7 +304,7 @@ function ProfileView() {
     <div className="profileCard">
       <Avatar size={90} src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&h=160&fit=crop&crop=face" />
       <h2>Manish</h2>
-      <p>Team Head • Herbalife Manager</p>
+      <p>Team Head • Herbalife</p>
       <Button type="primary">Edit Profile</Button>
     </div>
     <div className="panel"><h3>Subscription Plans</h3>{plans.map(p => <div className="planRow" key={p.id}><b>{p.name}</b><span>₹{p.pricePerDay} × {p.days}</span><Tag color="green">₹{p.total}</Tag></div>)}</div>

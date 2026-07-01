@@ -13,12 +13,14 @@ const items = [
   { key: 'settings', label: 'Settings', icon: <SettingOutlined /> }
 ];
 
-export default function Sidebar({ active, onChange }) {
+export default function Sidebar({ active, isAdmin, onChange }) {
+  const visibleItems = isAdmin ? items : items.filter((item) => item.key !== 'teams');
+
   return (
     <aside className="sidebar">
       <Logo />
       <div className="sideMenu">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <button key={item.key} className={active === item.key ? 'active' : ''} onClick={() => onChange(item.key)}>
             {item.icon}<span>{item.label}</span>
           </button>
