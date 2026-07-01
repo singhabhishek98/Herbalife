@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Avatar, Button, DatePicker, Empty, Input, message, Popconfirm, Table, Tag } from 'antd';
 import {
   BellOutlined, CalendarOutlined, DownloadOutlined, FilterOutlined, MenuOutlined, PlusOutlined,
-  SearchOutlined, TeamOutlined, UserAddOutlined, UsergroupAddOutlined, WalletOutlined
+  SearchOutlined, TeamOutlined, UsergroupAddOutlined, WalletOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { initialMembers, plans, teams } from './data/mockData';
@@ -186,10 +186,7 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onAdd, onMark, 
 
       <div className="statsGrid">
         <StatCard title="Total Members" value={members.length} note="+12 this month" icon={<UsergroupAddOutlined />} />
-        <StatCard title="Today Visits" value={summary.todayVisits} note="+5 vs yesterday" icon={<TeamOutlined />} />
-        <StatCard title="Expiring Soon" value={summary.expiring} note="In next 3 days" icon={<BellOutlined />} />
-        <StatCard title="Expired Members" value={summary.expired} note="Needs attention" icon={<UserAddOutlined />} />
-        <StatCard title="Total Collection" value={currency(summary.collection)} note="+ ₹2,350 vs yesterday" icon={<WalletOutlined />} green />
+        <StatCard title="Active Member" value={summary.todayVisits} note="+5 vs yesterday" icon={<TeamOutlined />} />
       </div>
 
       <div className="dashboardContent">
@@ -203,19 +200,6 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onAdd, onMark, 
               <Tag color={status.tone === 'green' ? 'green' : status.tone === 'orange' ? 'orange' : 'red'}>{status.label}</Tag>
               <Button size="small" type="primary" onClick={() => onRenew(m)}>Renew</Button>
             </div>;
-          })}
-        </div>
-
-        <div className="panel teamsPreview">
-          <div className="panelHead"><h3>Team Members</h3><Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>Add Member</Button></div>
-          {visibleTeams.map((team) => {
-            const teamMembers = members.filter((m) => m.teamId === team.id);
-            const expiring = teamMembers.filter((m) => m.remainingDays <= 5).length;
-            return <button className="teamRow" key={team.id} onClick={() => onTeam(team)}>
-              <Avatar size={52} src={team.avatar} />
-              <span><b>{team.name}</b><small>{teamMembers.length} Members • {expiring} Expiring Soon</small></span>
-              <b>›</b>
-            </button>;
           })}
         </div>
 
