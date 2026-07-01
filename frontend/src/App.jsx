@@ -134,7 +134,7 @@ export default function App() {
 
         {active === 'teams' && <TeamsView members={visibleMembers} visibleTeams={visibleTeams} onTeam={goTeam} />}
 
-        {(active === 'members' || active === 'visits' || active === 'alerts') && (
+        {active === 'members' && (
           <MembersView
             selectedTeam={selectedTeam}
             search={search}
@@ -148,7 +148,7 @@ export default function App() {
           />
         )}
 
-        {(active === 'reports' || active === 'payments') && <ReportsView members={visibleMembers} visitLog={visitLog.filter((v) => visibleMembers.some((m) => m.id === v.memberId))} />}
+        {active === 'reports' && <ReportsView members={visibleMembers} visitLog={visitLog.filter((v) => visibleMembers.some((m) => m.id === v.memberId))} />}
         {(active === 'profile' || active === 'settings') && <ProfileView />}
       </main>
 
@@ -181,7 +181,7 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onAdd, onMark, 
 
       <section className="heroMobile">
         <h1>Good Morning, Manish 👋</h1>
-        <p>Track members, visits and subscriptions</p>
+        <p>Track members and subscriptions</p>
       </section>
 
       <div className="statsGrid">
