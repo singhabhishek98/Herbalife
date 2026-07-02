@@ -14,6 +14,7 @@ import BottomNav from './components/BottomNav';
 import MemberCard from './components/MemberCard';
 import MemberFormModal from './components/MemberFormModal';
 import RenewModal from './components/RenewModal';
+import ForgotPasswordPage from './pages/Auth/ForgotPassword';
 
 const currentUser = {
   name: 'Manish',
@@ -29,6 +30,9 @@ export default function App() {
   const [memberModal, setMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [renewMember, setRenewMember] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
   const [visitLog, setVisitLog] = useState([
     { id: 1, memberId: 101, date: '2026-07-01' },
     { id: 2, memberId: 102, date: '2026-07-02' },
@@ -121,6 +125,28 @@ export default function App() {
     setActive('members');
   };
 
+  const handleAuthSubmit = (event) => {
+    event.preventDefault();
+    if (authMode === 'forgot') return;
+    if (!authForm.email || !authForm.password || (authMode === 'signup' && !authForm.name)) {
+      return message.warning('Please fill in all fields');
+    }
+    setIsAuthenticated(true);
+    message.success(authMode === 'login' ? 'Logged in successfully' : 'Account created successfully');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <AuthPage
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        authForm={authForm}
+        setAuthForm={setAuthForm}
+        onSubmit={handleAuthSubmit}
+      />
+    );
+  }
+
   return (
     <div className="appShell">
       <Sidebar active={active} isAdmin={isAdmin} onChange={(key) => { setActive(key); if (key !== 'members') setSelectedTeam(null); }} />
@@ -156,6 +182,71 @@ export default function App() {
 
       <MemberFormModal open={memberModal} editing={editingMember} isAdmin={isAdmin} visibleTeams={visibleTeams} currentUser={currentUser} onCancel={() => setMemberModal(false)} onSubmit={handleSubmitMember} />
       <RenewModal open={!!renewMember} member={renewMember} onCancel={() => setRenewMember(null)} onSubmit={handleRenew} />
+    </div>
+  );
+}
+
+function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit }) {
+  if (authMode === 'forgot') {
+    return <ForgotPasswordPage onBackToLogin={() => setAuthMode('login')} />;
+  }
+
+  return (
+    <div className="authPage">
+      <div className="authCard">
+        <div className="authHeader">
+          <div className="logoBox">
+            <div className="logoIcon"><span style={{ fontSize: 22 }}>🌿</span></div>
+            <div>
+              <div className="logoTitle">Herbalife</div>
+              <div className="logoSub">MEMBER DASH</div>
+            </div>
+          </div>
+          <p className="authIntro">Welcome back. Sign in or create a new account to continue.</p>
+        </div>
+
+        <div className="authToggle">
+          <button type="button" className={authMode === 'login' ? 'active' : ''} onClick={() => setAuthMode('login')}>Login</button>
+          <button type="button" className={authMode === 'signup' ? 'active' : ''} onClick={() => setAuthMode('signup')}>Signup</button>
+        </div>
+
+        <form className="authForm" onSubmit={onSubmit}>
+          {authMode === 'signup' && (
+            <Input
+              placeholder="Full name"
+              value={authForm.name}
+              onChange={(e) => setAuthForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          )}
+          <Input
+            placeholder="Email address"
+            type="email"
+            value={authForm.email}
+            onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
+          />
+          <Input.Password
+            placeholder="Password"
+            value={authForm.password}
+            onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
+          />
+          <Button type="primary" htmlType="submit" block>
+            {authMode === 'login' ? 'Login' : 'Create Account'}
+          </Button>
+        </form>
+
+        {authMode === 'login' && (
+          <div className="authForgotLink">
+            <button type="button" onClick={() => setAuthMode('forgot')}>Forgot Password?</button>
+          </div>
+        )}
+
+        <p className="authHint">
+          {authMode === 'login' ? 'New here?' : 'Already have an account?'}
+          <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}>
+            {authMode === 'login' ? 'Create account' : 'Login instead'}
+          </button>
+        </p>
+      </div>
     </div>
   );
 }
