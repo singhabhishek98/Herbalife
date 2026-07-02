@@ -16,7 +16,8 @@ const defaultAllowedOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:4173',
   'http://127.0.0.1:4173',
-  'https://herbalife-one.vercel.app'
+  'https://herbalife-one.vercel.app',
+  'https://herbaclub.netlify.app'
 ];
 
 const configuredOrigins = (process.env.CORS_ORIGIN || '')
@@ -26,7 +27,7 @@ const configuredOrigins = (process.env.CORS_ORIGIN || '')
 
 const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredOrigins]);
 
-app.use(cors({
+const corsOptions = {
   origin(origin, callback) {
     if (!origin || allowedOrigins.has(origin)) {
       return callback(null, true);
@@ -34,7 +35,10 @@ app.use(cors({
 
     return callback(new Error('CORS origin not allowed'));
   }
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.get('/', (req, res) => {
