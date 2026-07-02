@@ -40,7 +40,7 @@ export default function MemberFormModal({ open, onCancel, onSubmit, editing, isA
             <Input placeholder="Enter customer name" />
           </Form.Item>
           <Form.Item name="mobile" label="Mobile Number" rules={[{ required: true, message: 'Enter mobile number' }]}>
-            <Input placeholder="9876543210" maxLength={10} />
+            <Input placeholder="Enter mobile number" maxLength={10} />
           </Form.Item>
           <Form.Item name="planId" label="Subscription Plan" rules={[{ required: true }]}>
             <Select placeholder="Select subscription plan" options={plans.map((plan) => ({ value: plan.id, label: plan.name }))} />

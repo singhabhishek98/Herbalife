@@ -35,11 +35,6 @@ export default function DashboardPage({ summary, members, endingSoon, onAdd, onR
             </div>;
           })}
         </div>
-
-        <div className="panel recentPanel">
-          <h3>Recent Visits</h3>
-          <p>Member activity will appear here.</p>
-        </div>
       </div>
     </div>
   );

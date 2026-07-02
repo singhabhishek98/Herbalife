@@ -60,6 +60,5 @@ export const api = {
   renewMember: (id, body) => request(`/members/${id}/renew`, { method: 'POST', body: JSON.stringify(body) }),
   getTeams: () => request('/teams'),
   getPlans: () => request('/plans'),
-  getVisits: () => request('/visits'),
   markVisit: (memberId) => request('/visits', { method: 'POST', body: JSON.stringify({ memberId }) })
 };
