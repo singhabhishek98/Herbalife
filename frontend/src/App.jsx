@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Avatar, Button, DatePicker, Empty, Input, message, Spin, Table, Tag } from 'antd';
 import {
-  BellOutlined, CalendarOutlined, DownloadOutlined, FilterOutlined, MenuOutlined, PlusOutlined,
+  BellOutlined, CalendarOutlined, DownloadOutlined, ExclamationCircleOutlined, FilterOutlined, MenuOutlined, PlusOutlined,
   SearchOutlined, TeamOutlined, UsergroupAddOutlined, WalletOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -50,7 +50,6 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(storedSession?.user || null);
   const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState(defaultAuthForm);
-  const [visitLog, setVisitLog] = useState([]);
   const [bootLoading, setBootLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
   const isAdmin = currentUser?.role === 'admin';
@@ -70,14 +69,10 @@ export default function App() {
         setPlanCatalog(planData);
 
         if (storedSession?.token && storedSession?.user) {
-          const [memberData, visitData] = await Promise.all([
-            api.getMembers(),
-            api.getVisits()
-          ]);
+          const memberData = await api.getMembers();
 
           if (ignore) return;
           setMembers(memberData);
-          setVisitLog(visitData);
         }
       } catch (error) {
         if (!ignore) {
@@ -117,13 +112,13 @@ export default function App() {
   }, [search, selectedTeam, visibleMembers]);
 
   const summary = useMemo(() => {
-    const visibleMemberIds = new Set(visibleMembers.map((member) => member.id));
-    const todayVisits = visitLog.filter((visit) => visit.date === today() && visibleMemberIds.has(visit.memberId)).length;
+    const activeMembers = visibleMembers.filter((member) => member.remainingDays > 0).length;
+    const todayVisits = visibleMembers.filter((member) => member.lastVisit === today()).length;
     const expiring = visibleMembers.filter((member) => member.remainingDays > 0 && member.remainingDays <= 5).length;
     const expired = visibleMembers.filter((member) => member.remainingDays <= 0).length;
     const collection = visibleMembers.reduce((sum, member) => sum + (member.paymentStatus === 'Paid' ? getPlan(member.planId).total : 0), 0);
-    return { todayVisits, expiring, expired, collection };
-  }, [visibleMembers, visitLog]);
+    return { activeMembers, todayVisits, expiring, expired, collection };
+  }, [visibleMembers]);
 
   const endingSoon = useMemo(
     () => [...visibleMembers].filter((member) => member.remainingDays <= 5).sort((a, b) => a.remainingDays - b.remainingDays),
@@ -177,7 +172,6 @@ export default function App() {
     await withPageLoading(async () => {
       await api.deleteMember(id);
       setMembers((prev) => prev.filter((member) => member.id !== id));
-      setVisitLog((prev) => prev.filter((visit) => visit.memberId !== id));
       message.success('Member deleted');
     });
   };
@@ -190,7 +184,6 @@ export default function App() {
           ? { ...member, remainingDays: response.member.remainingDays, lastVisit: response.member.lastVisit }
           : member
       )));
-      setVisitLog((prev) => [response.visit, ...prev]);
       message.success('Present marked. Remaining day updated.');
     });
   };
@@ -231,9 +224,8 @@ export default function App() {
         setIsAuthenticated(true);
         setAuthForm(defaultAuthForm);
 
-        const [memberData, visitData] = await Promise.all([api.getMembers(), api.getVisits()]);
+        const memberData = await api.getMembers();
         setMembers(memberData);
-        setVisitLog(visitData);
         message.success(authMode === 'login' ? 'Logged in successfully' : 'Account created successfully');
       });
     } catch {
@@ -281,7 +273,6 @@ export default function App() {
     clearStoredSession();
     setCurrentUser(null);
     setMembers([]);
-    setVisitLog([]);
     setIsAuthenticated(false);
     setActive('dashboard');
     setSelectedTeam(null);
@@ -343,7 +334,7 @@ export default function App() {
           />
         )}
 
-        {active === 'reports' && <ReportsView members={visibleMembers} visitLog={visitLog.filter((visit) => visibleMembers.some((member) => member.id === visit.memberId))} />}
+        {active === 'reports' && <ReportsView members={visibleMembers} summary={summary} />}
         {active === 'profile' && <ProfileView currentUser={currentUser} onLogout={handleLogout} planCatalog={planCatalog} />}
         {active === 'settings' && <ProfileView currentUser={currentUser} onLogout={handleLogout} planCatalog={planCatalog} />}
       </main>
@@ -428,6 +419,10 @@ function MobileTop({ active, selectedTeam, onBack }) {
 }
 
 function Dashboard({ summary, members, visibleTeams, endingSoon, onRenew, currentUser }) {
+  const subscribedMembers = members
+    .filter((member) => getPlan(member.planId))
+    .sort((a, b) => dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf());
+
   return (
     <div className="page dashboardPage">
       <div className="desktopHeader">
@@ -445,27 +440,43 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onRenew, curren
 
       <div className="statsGrid">
         <StatCard title="Total Members" value={members.length} note="+12 this month" icon={<UsergroupAddOutlined />} accent="green" />
-        <StatCard title="Active Members" value={summary.todayVisits} note="+5 vs yesterday" icon={<TeamOutlined />} accent="green" />
-        <StatCard title="Ending Soon" value={endingSoon.length} note={`+${Math.min(endingSoon.length, 1)} this week`} icon={<CalendarOutlined />} accent="orange" />
+        <StatCard title="Active Members" value={summary.activeMembers} note={`${summary.expired} expired`} icon={<TeamOutlined />} accent="green" />
+        <StatCard title="Today Visit" value={summary.todayVisits} note={`${summary.todayVisits} marked today`} icon={<CalendarOutlined />} accent="orange" />
       </div>
 
       <div className="dashboardContent">
         <div className="panel endingPanel">
-          <div className="panelHead"><h3>Ending Soon</h3><Button type="link">View All</Button></div>
-          {endingSoon.slice(0, 4).map((member) => {
-            const status = memberStatus(member.remainingDays);
-            return <div className="miniMember" key={member.id}>
-              <Avatar style={avatarStyle(member.name)}>{initials(member.name).charAt(0)}</Avatar>
-              <b>{member.name}</b>
-              <Tag color={status.tone === 'green' ? 'green' : status.tone === 'orange' ? 'orange' : 'red'}>{status.label}</Tag>
-              <Button size="small" type="primary" onClick={() => onRenew(member)}>Renew</Button>
-            </div>;
-          })}
-        </div>
-
-        <div className="panel recentPanel">
-          <h3>Recent Visits</h3>
-          <MemberTable members={members.slice(0, 5)} compact />
+          <div className="panelHead"><h3>Subscribed Members</h3><Button type="link" className="endingViewAll">View All</Button></div>
+          <p className="endingIntro">All members who currently have a subscription plan.</p>
+          <div className="endingTable">
+            <div className="endingTableHead">
+              <span>Member Name</span>
+              <span>Plan</span>
+              <span>Expiry Date</span>
+              <span>Remaining</span>
+            </div>
+            {subscribedMembers.length ? subscribedMembers.map((member) => {
+              const status = memberStatus(member.remainingDays);
+              const expiryDate = dayjs(member.startDate).add(getPlan(member.planId).days - 1, 'day').format('DD MMM YYYY');
+              return <div className="endingRow" key={member.id}>
+                <div className="endingMember">
+                  <Avatar style={avatarStyle(member.name)}>{initials(member.name).charAt(0)}</Avatar>
+                  <b>{member.name}</b>
+                </div>
+                <span>{getPlan(member.planId).name}</span>
+                <span>{expiryDate}</span>
+                <Tag color={status.tone === 'green' ? 'green' : status.tone === 'orange' ? 'orange' : 'red'}>{status.label}</Tag>
+              </div>;
+            }) : (
+              <div className="endingEmpty">
+                <div className="endingEmptyIcon">
+                  <CalendarOutlined className="endingEmptyCalendar" />
+                  <ExclamationCircleOutlined className="endingEmptyAlert" />
+                </div>
+                <p>No subscribed members found.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -509,14 +520,14 @@ function MembersView({ selectedTeam, search, setSearch, members, onAdd, onMark, 
   </div>;
 }
 
-function ReportsView({ members, visitLog }) {
+function ReportsView({ members, summary }) {
   const paid = members.filter((member) => member.paymentStatus === 'Paid').length;
   return <div className="page">
     <div className="desktopHeader"><h1>Reports</h1><Button type="primary" icon={<DownloadOutlined />}>Export</Button></div>
     <div className="statsGrid reportStats">
       <StatCard title="Paid Members" value={paid} note="Payment completed" icon={<WalletOutlined />} />
       <StatCard title="Pending Payment" value={members.length - paid} note="Need follow up" icon={<BellOutlined />} />
-      <StatCard title="Total Visits" value={visitLog.length} note="All time visits" icon={<CalendarOutlined />} />
+      <StatCard title="Ending Soon" value={summary.expiring} note="Plans close to expiry" icon={<CalendarOutlined />} />
       <StatCard title="Revenue" value={currency(members.reduce((sum, member) => sum + (member.paymentStatus === 'Paid' ? getPlan(member.planId).total : 0), 0))} note="Current cycle" icon={<WalletOutlined />} green />
     </div>
     <div className="panel"><h3>Member Report</h3><MemberTable members={members} /></div>

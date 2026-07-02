@@ -2,7 +2,13 @@ const Member = require('../models/Member');
 const Visit = require('../models/Visit');
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: process.env.APP_TIMEZONE || 'Asia/Kolkata'
+  }).format(new Date());
+}
+
+function isAdmin(user) {
+  return user?.role === 'admin';
 }
 
 function serializeVisit(visit) {
@@ -11,26 +17,6 @@ function serializeVisit(visit) {
     memberId: visit.memberId.toString(),
     date: visit.date
   };
-}
-
-function isAdmin(user) {
-  return user?.role === 'admin';
-}
-
-async function listVisits(req, res, next) {
-  try {
-    if (isAdmin(req.user)) {
-      const visits = await Visit.find().sort({ createdAt: -1 });
-      return res.json(visits.map(serializeVisit));
-    }
-
-    const scopedMembers = await Member.find({ teamId: Number(req.user.teamId) }).select('_id');
-    const memberIds = scopedMembers.map((member) => member._id);
-    const visits = await Visit.find({ memberId: { $in: memberIds } }).sort({ createdAt: -1 });
-    return res.json(visits.map(serializeVisit));
-  } catch (error) {
-    return next(error);
-  }
 }
 
 async function markVisit(req, res, next) {
@@ -71,4 +57,4 @@ async function markVisit(req, res, next) {
   }
 }
 
-module.exports = { listVisits, markVisit };
+module.exports = { markVisit };
