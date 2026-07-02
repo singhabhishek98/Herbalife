@@ -4,8 +4,13 @@ import { plans } from '../data/catalogData';
 
 export default function MemberFormModal({ open, onCancel, onSubmit, editing, isAdmin, visibleTeams, currentUser }) {
   const [form] = Form.useForm();
-  const teamOptions = visibleTeams.map((team) => ({ value: team.id, label: team.name }));
   const defaultTeamId = editing?.teamId ?? (isAdmin ? visibleTeams[0]?.id : currentUser.teamId);
+  const initialValues = editing ? {
+    ...editing,
+    startDate: dayjs(editing.startDate),
+    planId: editing.planId,
+    teamId: editing.teamId
+  } : { teamId: defaultTeamId };
 
   return (
     <Modal
@@ -20,12 +25,7 @@ export default function MemberFormModal({ open, onCancel, onSubmit, editing, isA
         form={form}
         layout="vertical"
         preserve={false}
-        initialValues={editing ? {
-          ...editing,
-          startDate: dayjs(editing.startDate),
-          planId: editing.planId,
-          teamId: editing.teamId
-        } : { teamId: defaultTeamId, planId: 3, paymentStatus: 'Paid', startDate: dayjs() }}
+        initialValues={initialValues}
         onFinish={(values) => onSubmit({
           ...values,
           startDate: values.startDate.format('YYYY-MM-DD')
@@ -37,23 +37,17 @@ export default function MemberFormModal({ open, onCancel, onSubmit, editing, isA
         <Form.Item name="mobile" label="Mobile Number" rules={[{ required: true, message: 'Enter mobile number' }]}>
           <Input placeholder="9876543210" maxLength={10} />
         </Form.Item>
-        <Form.Item name="teamId" label="Team Head" rules={[{ required: true }]}>
-          <Select disabled={!isAdmin} options={teamOptions} />
-        </Form.Item>
         <Form.Item name="planId" label="Subscription Plan" rules={[{ required: true }]}>
-          <Select options={plans.map(p => ({ value: p.id, label: `${p.name} - ₹${p.pricePerDay} x ${p.days} = ₹${p.total}` }))} />
+          <Select placeholder="Select subscription plan" options={plans.map((plan) => ({ value: plan.id, label: plan.name }))} />
         </Form.Item>
         <Form.Item name="startDate" label="Start Date" rules={[{ required: true }]}>
-          <DatePicker className="full" />
+          <DatePicker className="full" placeholder="Select start date" />
         </Form.Item>
         <Form.Item name="paymentStatus" label="Payment Status">
           <Radio.Group>
             <Radio value="Paid">Paid</Radio>
             <Radio value="Pending">Pending</Radio>
           </Radio.Group>
-        </Form.Item>
-        <Form.Item name="notes" label="Notes">
-          <Input.TextArea rows={3} placeholder="Optional notes" />
         </Form.Item>
       </Form>
     </Modal>

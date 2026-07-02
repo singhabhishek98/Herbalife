@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Avatar, Button, DatePicker, Empty, Input, message, Popconfirm, Spin, Table, Tag } from 'antd';
+import { Avatar, Button, DatePicker, Empty, Input, message, Spin, Table, Tag } from 'antd';
 import {
   BellOutlined, CalendarOutlined, DownloadOutlined, FilterOutlined, MenuOutlined, PlusOutlined,
   SearchOutlined, TeamOutlined, UsergroupAddOutlined, WalletOutlined
@@ -241,14 +241,39 @@ export default function App() {
     }
   };
 
-  const handleForgotPassword = async (email) => {
-    try {
-      await withPageLoading(async () => {
-        const response = await api.forgotPassword({ email });
-        message.success(response.message);
-      });
-    } catch {
-      return;
+  const handleForgotPassword = {
+    sendOtp: async (email) => {
+      try {
+        await withPageLoading(async () => {
+          const response = await api.forgotPassword({ email });
+          message.success(response.message);
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    verifyOtp: async (email, otp) => {
+      try {
+        await withPageLoading(async () => {
+          const response = await api.verifyResetOtp({ email, otp });
+          message.success(response.message);
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    resetPassword: async (email, otp, password) => {
+      try {
+        await withPageLoading(async () => {
+          const response = await api.resetPassword({ email, otp, password });
+          message.success(response.message);
+        });
+        return true;
+      } catch {
+        return false;
+      }
     }
   };
 
@@ -340,13 +365,7 @@ function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit, onFo
     <div className="authPage">
       <div className="authCard">
         <div className="authHeader">
-          <div className="logoBox">
-            <div className="logoIcon"><span style={{ fontSize: 22 }}>🌿</span></div>
-            <div>
-              <div className="logoTitle">Herbalife</div>
-              <div className="logoSub">MEMBER DASH</div>
-            </div>
-          </div>
+          <Logo />
           <p className="authIntro">Welcome back. Sign in or create a new account to continue.</p>
         </div>
 
@@ -479,11 +498,9 @@ function MembersView({ selectedTeam, search, setSearch, members, onAdd, onMark, 
       {selectedTeam && <Tag color="blue">{selectedTeam.name}</Tag>}
     </div>
     {members.length ? <div className="memberGrid">
-      {members.map((member) => <Popconfirm key={member.id} title="Delete this member?" onConfirm={() => onDelete(member.id)} okText="Delete" cancelText="Cancel">
-        <div onClick={(e) => e.stopPropagation()}>
-          <MemberCard member={member} onMark={onMark} onRenew={onRenew} onEdit={onEdit} onDelete={() => {}} />
-        </div>
-      </Popconfirm>)}
+      {members.map((member) => (
+        <MemberCard key={member.id} member={member} onMark={onMark} onRenew={onRenew} onEdit={onEdit} onDelete={onDelete} />
+      ))}
     </div> : <Empty description="No member found" />}
   </div>;
 }

@@ -12,14 +12,21 @@ function serializeMember(member) {
     remainingDays: member.remainingDays,
     lastVisit: member.lastVisit,
     paymentStatus: member.paymentStatus,
-    notes: member.notes,
     avatar: member.avatar
   };
 }
 
+function isAdmin(user) {
+  return user?.role === 'admin';
+}
+
+function getMemberScope(user) {
+  return isAdmin(user) ? {} : { teamId: Number(user.teamId) };
+}
+
 async function listMembers(req, res, next) {
   try {
-    const members = await Member.find().sort({ createdAt: -1 });
+    const members = await Member.find(getMemberScope(req.user)).sort({ createdAt: -1 });
     return res.json(members.map(serializeMember));
   } catch (error) {
     return next(error);
@@ -35,7 +42,7 @@ async function createMember(req, res, next) {
 
     const member = await Member.create({
       ...req.body,
-      teamId: Number(req.body.teamId),
+      teamId: isAdmin(req.user) ? Number(req.body.teamId) : Number(req.user.teamId),
       planId: Number(req.body.planId),
       remainingDays: plan.days,
       lastVisit: '',
@@ -51,10 +58,10 @@ async function createMember(req, res, next) {
 async function updateMember(req, res, next) {
   try {
     const update = { ...req.body };
-    if (update.teamId !== undefined) update.teamId = Number(update.teamId);
+    if (update.teamId !== undefined) update.teamId = isAdmin(req.user) ? Number(update.teamId) : Number(req.user.teamId);
     if (update.planId !== undefined) update.planId = Number(update.planId);
 
-    const member = await Member.findByIdAndUpdate(req.params.id, update, {
+    const member = await Member.findOneAndUpdate({ _id: req.params.id, ...getMemberScope(req.user) }, update, {
       new: true,
       runValidators: true
     });
@@ -71,7 +78,7 @@ async function updateMember(req, res, next) {
 
 async function deleteMember(req, res, next) {
   try {
-    const member = await Member.findByIdAndDelete(req.params.id);
+    const member = await Member.findOneAndDelete({ _id: req.params.id, ...getMemberScope(req.user) });
 
     if (!member) {
       return res.status(404).json({ message: 'Member not found' });
@@ -92,8 +99,8 @@ async function renewMember(req, res, next) {
       return res.status(400).json({ message: 'Invalid plan selected' });
     }
 
-    const member = await Member.findByIdAndUpdate(
-      req.params.id,
+    const member = await Member.findOneAndUpdate(
+      { _id: req.params.id, ...getMemberScope(req.user) },
       {
         planId: Number(planId),
         paymentStatus,

@@ -14,7 +14,6 @@ const memberSchema = new mongoose.Schema(
       enum: ['Paid', 'Pending'],
       default: 'Paid'
     },
-    notes: { type: String, default: '' },
     avatar: { type: String, default: '' }
   },
   { timestamps: true }

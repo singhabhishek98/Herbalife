@@ -13,9 +13,20 @@ function serializeVisit(visit) {
   };
 }
 
+function isAdmin(user) {
+  return user?.role === 'admin';
+}
+
 async function listVisits(req, res, next) {
   try {
-    const visits = await Visit.find().sort({ createdAt: -1 });
+    if (isAdmin(req.user)) {
+      const visits = await Visit.find().sort({ createdAt: -1 });
+      return res.json(visits.map(serializeVisit));
+    }
+
+    const scopedMembers = await Member.find({ teamId: Number(req.user.teamId) }).select('_id');
+    const memberIds = scopedMembers.map((member) => member._id);
+    const visits = await Visit.find({ memberId: { $in: memberIds } }).sort({ createdAt: -1 });
     return res.json(visits.map(serializeVisit));
   } catch (error) {
     return next(error);
@@ -34,7 +45,10 @@ async function markVisit(req, res, next) {
       return res.status(409).json({ message: 'This member is already marked present today' });
     }
 
-    const member = await Member.findById(memberId);
+    const memberQuery = isAdmin(req.user)
+      ? { _id: memberId }
+      : { _id: memberId, teamId: Number(req.user.teamId) };
+    const member = await Member.findOne(memberQuery);
     if (!member) {
       return res.status(404).json({ message: 'Member not found' });
     }
