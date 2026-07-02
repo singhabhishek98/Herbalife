@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { plans, teams } from '../data/mockData';
+import { plans, teams } from '../data/catalogData';
 
 export const today = () => dayjs().format('YYYY-MM-DD');
 export const formatDate = (date) => (date ? dayjs(date).format('DD MMM YYYY') : '-');

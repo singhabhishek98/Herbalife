@@ -1,16 +1,21 @@
 import { Button, Input, message } from 'antd';
 import { useState } from 'react';
 
-export default function ForgotPasswordPage({ onBackToLogin }) {
+export default function ForgotPasswordPage({ onBackToLogin, onSubmitEmail, loading }) {
   const [email, setEmail] = useState('');
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!email) {
       return message.warning('Please enter your email address');
     }
 
-    message.success(`Password reset link sent to ${email}`);
+    if (onSubmitEmail) {
+      await onSubmitEmail(email);
+    } else {
+      message.success(`Password reset link sent to ${email}`);
+    }
+
     setEmail('');
   };
 
@@ -25,6 +30,7 @@ export default function ForgotPasswordPage({ onBackToLogin }) {
               <div className="logoSub">MEMBER DASH</div>
             </div>
           </div>
+          <div className="authBadge">Password Recovery</div>
           <p className="authIntro">Enter your email and we’ll send you a password reset link.</p>
         </div>
 
@@ -35,12 +41,17 @@ export default function ForgotPasswordPage({ onBackToLogin }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="primary" htmlType="submit" block>Send Reset Link</Button>
+          <Button type="primary" htmlType="submit" block loading={loading} className="resetPrimaryButton">
+            Send Reset Link
+          </Button>
         </form>
 
-        <p className="authHint">
-          <button type="button" onClick={onBackToLogin}>Back to login</button>
-        </p>
+        <div className="forgotActions">
+          <button type="button" className="forgotBackButton" onClick={onBackToLogin}>
+            Back to login
+          </button>
+          <p className="forgotHelperText">Use the same email you used while signing up.</p>
+        </div>
       </div>
     </div>
   );

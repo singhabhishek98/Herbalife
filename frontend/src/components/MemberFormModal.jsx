@@ -1,6 +1,6 @@
 import { Modal, Form, Input, Select, DatePicker, Radio } from 'antd';
 import dayjs from 'dayjs';
-import { plans } from '../data/mockData';
+import { plans } from '../data/catalogData';
 
 export default function MemberFormModal({ open, onCancel, onSubmit, editing, isAdmin, visibleTeams, currentUser }) {
   const [form] = Form.useForm();
