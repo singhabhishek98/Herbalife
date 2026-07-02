@@ -1,5 +1,5 @@
 import { Modal, Form, Select, Radio } from 'antd';
-import { plans } from '../data/mockData';
+import { plans } from '../data/catalogData';
 
 export default function RenewModal({ open, onCancel, onSubmit, member }) {
   const [form] = Form.useForm();
