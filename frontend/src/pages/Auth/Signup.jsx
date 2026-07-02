@@ -1,17 +1,12 @@
 import { Button, Input } from 'antd';
+import Logo from '../../components/Logo';
 
 export default function SignupPage({ authForm, setAuthForm, onSubmit, onSwitchToLogin }) {
   return (
     <div className="authPage">
       <div className="authCard">
         <div className="authHeader">
-          <div className="logoBox">
-            <div className="logoIcon"><span style={{ fontSize: 22 }}>🌿</span></div>
-            <div>
-              <div className="logoTitle">Herbalife</div>
-              <div className="logoSub">MEMBER DASH</div>
-            </div>
-          </div>
+          <Logo />
           <p className="authIntro">Create a new account to get started.</p>
         </div>
 

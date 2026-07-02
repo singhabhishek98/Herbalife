@@ -9,6 +9,7 @@ export default function Logo({ compact = false }) {
       {!compact && (
         <div>
           <div className="logoTitle">Herbalife</div>
+          <div className="logoSub">MEMBER DASH</div>
         </div>
       )}
     </div>
