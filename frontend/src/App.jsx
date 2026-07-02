@@ -7,7 +7,7 @@ import {
 import dayjs from 'dayjs';
 import { plans as fallbackPlans, teams as fallbackTeams } from './data/catalogData';
 import { api } from './lib/api';
-import { currency, formatDate, getPlan, getTeam, initials, memberStatus, today } from './utils/helpers';
+import { avatarStyle, currency, formatDate, getPlan, getTeam, initials, memberStatus, today } from './utils/helpers';
 import Logo from './components/Logo';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -312,7 +312,7 @@ export default function App() {
 
   return (
     <div className="appShell">
-      <Sidebar active={active} isAdmin={isAdmin} onChange={(key) => { setActive(key); if (key !== 'members') setSelectedTeam(null); }} />
+      <Sidebar active={active} isAdmin={isAdmin} currentUser={currentUser} onChange={(key) => { setActive(key); if (key !== 'members') setSelectedTeam(null); }} />
 
       <main className="mainArea">
         <MobileTop active={active} selectedTeam={selectedTeam} onBack={() => { setSelectedTeam(null); setActive('teams'); }} />
@@ -431,7 +431,10 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onRenew, curren
   return (
     <div className="page dashboardPage">
       <div className="desktopHeader">
-        <h1>Dashboard</h1>
+        <div className="dashboardHeading">
+          <h1>Dashboard</h1>
+          <p>Welcome back, {currentUser?.name || 'User'}! 👋</p>
+        </div>
         <div><DatePicker defaultValue={dayjs(today())} /> <Button type="primary" icon={<DownloadOutlined />}>Export</Button></div>
       </div>
 
@@ -441,8 +444,9 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onRenew, curren
       </section>
 
       <div className="statsGrid">
-        <StatCard title="Total Members" value={members.length} note="+12 this month" icon={<UsergroupAddOutlined />} />
-        <StatCard title="Active Member" value={summary.todayVisits} note="+5 vs yesterday" icon={<TeamOutlined />} />
+        <StatCard title="Total Members" value={members.length} note="+12 this month" icon={<UsergroupAddOutlined />} accent="green" />
+        <StatCard title="Active Members" value={summary.todayVisits} note="+5 vs yesterday" icon={<TeamOutlined />} accent="green" />
+        <StatCard title="Ending Soon" value={endingSoon.length} note={`+${Math.min(endingSoon.length, 1)} this week`} icon={<CalendarOutlined />} accent="orange" />
       </div>
 
       <div className="dashboardContent">
@@ -451,7 +455,7 @@ function Dashboard({ summary, members, visibleTeams, endingSoon, onRenew, curren
           {endingSoon.slice(0, 4).map((member) => {
             const status = memberStatus(member.remainingDays);
             return <div className="miniMember" key={member.id}>
-              <Avatar src={member.avatar}>{initials(member.name)}</Avatar>
+              <Avatar style={avatarStyle(member.name)}>{initials(member.name).charAt(0)}</Avatar>
               <b>{member.name}</b>
               <Tag color={status.tone === 'green' ? 'green' : status.tone === 'orange' ? 'orange' : 'red'}>{status.label}</Tag>
               <Button size="small" type="primary" onClick={() => onRenew(member)}>Renew</Button>
@@ -476,7 +480,7 @@ function TeamsView({ members, visibleTeams, onTeam }) {
         const teamMembers = members.filter((member) => member.teamId === team.id);
         const expiring = teamMembers.filter((member) => member.remainingDays <= 5).length;
         return <button className="teamCard" key={team.id} onClick={() => onTeam(team)}>
-          <Avatar size={72} src={team.avatar} />
+          <Avatar size={72} src={team.avatar} style={!team.avatar ? avatarStyle(team.name) : undefined}>{initials(team.name)}</Avatar>
           <div><b>{team.name}</b><Tag color="green">Head</Tag><p>{teamMembers.length} Members • {Math.max(1, Math.round(teamMembers.length / 2))} Today Visits</p><small>{expiring} Expiring Soon</small></div>
           <span>›</span>
         </button>;
@@ -540,7 +544,9 @@ function MemberTable({ members, compact }) {
 function ProfileView({ currentUser, onLogout, planCatalog }) {
   return <div className="page profilePage">
     <div className="profileCard">
-      <Avatar size={90} src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&h=160&fit=crop&crop=face" />
+      <Avatar size={90} style={avatarStyle(currentUser?.name)}>
+        {initials(currentUser?.name || 'User')}
+      </Avatar>
       <h2>{currentUser?.name || 'User'}</h2>
       <p>{currentUser?.role === 'admin' ? 'Admin' : 'Team Head'} • Herbalife</p>
       <Button type="primary" onClick={onLogout}>Logout</Button>

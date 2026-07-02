@@ -1,6 +1,7 @@
 import { BarChartOutlined, DashboardOutlined, SettingOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
 import { Avatar } from 'antd';
 import Logo from './Logo';
+import { avatarStyle, initials } from '../utils/helpers';
 
 const items = [
   { key: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
@@ -10,7 +11,7 @@ const items = [
   { key: 'settings', label: 'Settings', icon: <SettingOutlined /> }
 ];
 
-export default function Sidebar({ active, isAdmin, onChange }) {
+export default function Sidebar({ active, isAdmin, currentUser, onChange }) {
   const visibleItems = isAdmin ? items : items.filter((item) => item.key !== 'teams');
 
   return (
@@ -24,8 +25,13 @@ export default function Sidebar({ active, isAdmin, onChange }) {
         ))}
       </div>
       <div className="sideUser">
-        <Avatar src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face" />
-        <div><b>Manish</b><small>Team Head</small></div>
+        <Avatar style={avatarStyle(currentUser?.name)}>
+          {initials(currentUser?.name || 'User')}
+        </Avatar>
+        <div>
+          <b>{currentUser?.name || 'User'}</b>
+          <small>{currentUser?.role === 'admin' ? 'Admin' : 'Team Head'}</small>
+        </div>
       </div>
     </aside>
   );

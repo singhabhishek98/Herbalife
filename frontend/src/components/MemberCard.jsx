@@ -1,6 +1,6 @@
 import { Avatar, Button, Dropdown, Tag } from 'antd';
 import { CalendarOutlined, MoreOutlined } from '@ant-design/icons';
-import { formatDate, getPlan, initials, memberStatus } from '../utils/helpers';
+import { avatarStyle, formatDate, getPlan, initials, memberStatus } from '../utils/helpers';
 
 export default function MemberCard({ member, onMark, onRenew, onEdit, onDelete }) {
   const plan = getPlan(member.planId);
@@ -8,7 +8,9 @@ export default function MemberCard({ member, onMark, onRenew, onEdit, onDelete }
   return (
     <div className="memberCard">
       <div className="memberMain">
-        <Avatar size={56} src={member.avatar}>{initials(member.name)}</Avatar>
+        <Avatar size={56} style={avatarStyle(member.name)} className="memberInitialAvatar">
+          {initials(member.name).charAt(0)}
+        </Avatar>
         <div className="memberInfo">
           <div className="memberName">{member.name}</div>
           <Tag color="green">Plan: {plan.name}</Tag>
