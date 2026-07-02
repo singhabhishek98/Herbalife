@@ -2,7 +2,7 @@ import { Avatar, Button, DatePicker, Tag } from 'antd';
 import { DownloadOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import StatCard from '../../components/StatCard';
-import { initials, memberStatus } from '../../utils/helpers';
+import { avatarStyle, initials, memberStatus } from '../../utils/helpers';
 
 export default function DashboardPage({ summary, members, endingSoon, onAdd, onRenew, onTeam }) {
   return (
@@ -28,7 +28,7 @@ export default function DashboardPage({ summary, members, endingSoon, onAdd, onR
           {endingSoon.slice(0, 4).map((m) => {
             const status = memberStatus(m.remainingDays);
             return <div className="miniMember" key={m.id}>
-              <Avatar src={m.avatar}>{initials(m.name)}</Avatar>
+              <Avatar style={avatarStyle(m.name)}>{initials(m.name).charAt(0)}</Avatar>
               <b>{m.name}</b>
               <Tag color={status.tone === 'green' ? 'green' : status.tone === 'orange' ? 'orange' : 'red'}>{status.label}</Tag>
               <Button size="small" type="primary" onClick={() => onRenew(m)}>Renew</Button>
