@@ -11,7 +11,30 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorMiddleware'
 
 const app = express();
 
-app.use(cors());
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173',
+  'https://herbalife-one.vercel.app'
+];
+
+const configuredOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredOrigins]);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('CORS origin not allowed'));
+  }
+}));
 app.use(express.json());
 
 app.get('/', (req, res) => {
