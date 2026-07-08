@@ -110,7 +110,7 @@ export default function ForgotPasswordPage({ onBackToLogin, onSubmitEmail, loadi
           <button type="button" className="forgotBackButton" onClick={onBackToLogin}>
             Back to login
           </button>
-          <p className="forgotHelperText">Use the same email you used while signing up.</p>
+          <p className="forgotHelperText">Password reset currently works through the email linked to your account.</p>
         </div>
       </div>
     </div>

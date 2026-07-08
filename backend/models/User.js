@@ -3,8 +3,10 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    email: { type: String, unique: true, lowercase: true, trim: true, sparse: true },
+    mobile: { type: String, unique: true, trim: true, sparse: true },
+    googleId: { type: String, unique: true, sparse: true },
+    passwordHash: { type: String, default: null },
     resetOtpHash: { type: String, default: null },
     resetOtpExpiresAt: { type: Date, default: null },
     resetOtpVerifiedAt: { type: Date, default: null },
