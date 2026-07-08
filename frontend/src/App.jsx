@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Avatar, Button, DatePicker, Empty, Input, message, Spin, Table, Tag } from 'antd';
+import { GoogleLogin } from '@react-oauth/google';
 import {
   BellOutlined, CalendarOutlined, DownloadOutlined, ExclamationCircleOutlined, FilterOutlined, MenuOutlined, PlusOutlined,
   SearchOutlined, TeamOutlined, UsergroupAddOutlined, WalletOutlined
@@ -17,7 +18,8 @@ import MemberFormModal from './components/MemberFormModal';
 import RenewModal from './components/RenewModal';
 import ForgotPasswordPage from './pages/Auth/ForgotPassword';
 
-const defaultAuthForm = { name: '', email: '', password: '' };
+const defaultAuthForm = { name: '', contact: '', password: '', identifier: '' };
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
 function loadStoredSession() {
   try {
@@ -205,7 +207,7 @@ export default function App() {
   const handleAuthSubmit = async (event) => {
     event.preventDefault();
 
-    if (!authForm.email || !authForm.password || (authMode === 'signup' && !authForm.name)) {
+    if (!authForm.password || (authMode === 'signup' && (!authForm.name || !authForm.contact)) || (authMode === 'login' && !authForm.identifier)) {
       return message.warning('Please fill in all fields');
     }
 
@@ -216,8 +218,12 @@ export default function App() {
     try {
       await withPageLoading(async () => {
         const response = authMode === 'login'
-          ? await api.login({ email: authForm.email, password: authForm.password })
-          : await api.signup({ name: authForm.name, email: authForm.email, password: authForm.password });
+          ? await api.login({ identifier: authForm.identifier, password: authForm.password })
+          : await api.signup({
+            name: authForm.name,
+            identifier: authForm.contact,
+            password: authForm.password
+          });
 
         saveStoredSession(response);
         setCurrentUser(response.user);
@@ -227,6 +233,31 @@ export default function App() {
         const memberData = await api.getMembers();
         setMembers(memberData);
         message.success(authMode === 'login' ? 'Logged in successfully' : 'Account created successfully');
+      });
+    } catch {
+      return;
+    }
+  };
+
+  const handleGoogleLogin = async (googleResponse) => {
+    const credential = googleResponse?.credential;
+    const accessToken = googleResponse?.access_token;
+
+    if (!credential && !accessToken) {
+      return message.error('Google Sign-In failed. Please try again.');
+    }
+
+    try {
+      await withPageLoading(async () => {
+        const response = await api.googleAuth({ credential, accessToken });
+        saveStoredSession(response);
+        setCurrentUser(response.user);
+        setIsAuthenticated(true);
+        setAuthForm(defaultAuthForm);
+
+        const memberData = await api.getMembers();
+        setMembers(memberData);
+        message.success('Logged in with Google successfully');
       });
     } catch {
       return;
@@ -295,6 +326,7 @@ export default function App() {
         authForm={authForm}
         setAuthForm={setAuthForm}
         onSubmit={handleAuthSubmit}
+        onGoogleLogin={handleGoogleLogin}
         onForgotPassword={handleForgotPassword}
         loading={pageLoading}
       />
@@ -347,10 +379,12 @@ export default function App() {
   );
 }
 
-function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit, onForgotPassword, loading }) {
+function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit, onGoogleLogin, onForgotPassword, loading }) {
   if (authMode === 'forgot') {
     return <ForgotPasswordPage onBackToLogin={() => setAuthMode('login')} onSubmitEmail={onForgotPassword} loading={loading} />;
   }
+
+  const isLogin = authMode === 'login';
 
   return (
     <div className="authPage">
@@ -366,7 +400,7 @@ function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit, onFo
         </div>
 
         <form className="authForm" onSubmit={onSubmit}>
-          {authMode === 'signup' && (
+          {!isLogin && (
             <Input
               placeholder="Full name"
               value={authForm.name}
@@ -374,17 +408,19 @@ function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit, onFo
             />
           )}
           <Input
-            placeholder="Email address"
-            type="email"
-            value={authForm.email}
-            onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
+            placeholder={isLogin ? 'Email address or mobile number' : 'Mobile number or email address'}
+            type={isLogin ? 'text' : 'tel'}
+            value={isLogin ? authForm.identifier : authForm.contact}
+            onChange={(e) => setAuthForm((prev) => ({ ...prev, [isLogin ? 'identifier' : 'contact']: e.target.value }))}
+            inputMode={isLogin ? undefined : 'email'}
+            autoComplete={isLogin ? 'username' : 'email'}
           />
           <Input.Password
             placeholder="Password"
             value={authForm.password}
             onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
           />
-          {authMode === 'login' && (
+          {isLogin && (
             <div className="authForgotLink">
               <button type="button" className="authForgotButton" onClick={() => setAuthMode('forgot')}>
                 Forgot Password?
@@ -392,17 +428,42 @@ function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, onSubmit, onFo
             </div>
           )}
           <Button type="primary" htmlType="submit" block loading={loading}>
-            {authMode === 'login' ? 'Login' : 'Create Account'}
+            {isLogin ? 'Login' : 'Create Account'}
           </Button>
         </form>
 
+        {googleClientId && (
+          <>
+            <div className="authDivider"><span>{isLogin ? 'Login with Google' : 'Signup with Google'}</span></div>
+            <GoogleAuthButton isLogin={isLogin} onGoogleLogin={onGoogleLogin} />
+          </>
+        )}
+
         <p className="authHint">
-          {authMode === 'login' ? 'New here?' : 'Already have an account?'}
-          <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}>
-            {authMode === 'login' ? 'Create account' : 'Login instead'}
+          {isLogin ? 'New here?' : 'Already have an account?'}
+          <button type="button" onClick={() => setAuthMode(isLogin ? 'signup' : 'login')}>
+            {isLogin ? 'Create account' : 'Login instead'}
           </button>
         </p>
       </div>
+    </div>
+  );
+}
+
+function GoogleAuthButton({ isLogin, onGoogleLogin }) {
+  return (
+    <div className="googleLoginWrap">
+      <GoogleLogin
+        onSuccess={onGoogleLogin}
+        onError={() => message.error('Google Sign-In failed. Please try again.')}
+        theme="outline"
+        size="large"
+        shape="pill"
+        text="continue_with"
+        logo_alignment="left"
+        width="100%"
+        containerProps={{ className: 'googleOfficialWrap' }}
+      />
     </div>
   );
 }

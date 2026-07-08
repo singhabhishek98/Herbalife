@@ -27,3 +27,8 @@
 .forgotHelperText{margin:0;text-align:center;color:#667085;font-size:13px;line-height:1.5}
 .authHint{margin-top:16px;text-align:center;color:#667085;font-size:14px;display:flex;justify-content:center;gap:6px;align-items:center;flex-wrap:wrap}
 .authHint button{border:0;background:transparent;color:#08a045;font-weight:700;padding:0;cursor:pointer}
+.authDivider{position:relative;text-align:center;margin:18px 0 14px;color:#98a2b3;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.authDivider::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#e5ece6}
+.authDivider span{position:relative;display:inline-block;padding:0 12px;background:#fff}
+.googleLoginWrap{display:flex;justify-content:center}
+.googleOfficialWrap{width:100%;display:flex;justify-content:center}
