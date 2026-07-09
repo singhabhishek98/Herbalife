@@ -156,7 +156,7 @@ async function googleAuth(req, res, next) {
       return res.status(500).json({ message: 'Google Sign-In is not configured on the server' });
     }
 
-    const { credential, accessToken } = req.body;
+    const { credential, accessToken, mode = 'login' } = req.body;
     let payload;
 
     if (credential) {
@@ -189,6 +189,10 @@ async function googleAuth(req, res, next) {
     });
 
     if (!user) {
+      if (mode !== 'signup') {
+        return res.status(404).json({ message: 'No account found for this Google account. Please sign up first.' });
+      }
+
       const assignedTeamId = await getNextHeadTeamId();
       user = await User.create({
         name: payload.name || normalizedEmail.split('@')[0],
@@ -198,6 +202,10 @@ async function googleAuth(req, res, next) {
         teamId: assignedTeamId
       });
     } else if (!user.googleId) {
+      if (mode !== 'signup') {
+        return res.status(400).json({ message: 'This account was created with password login. Use your password or sign up with Google to link it.' });
+      }
+
       user.googleId = payload.sub;
       if (!user.email) {
         user.email = normalizedEmail;

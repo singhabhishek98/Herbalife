@@ -27,9 +27,17 @@ const configuredOrigins = (process.env.CORS_ORIGIN || '')
 
 const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredOrigins]);
 
+function isAllowedDevOrigin(origin = '') {
+  if (!origin.startsWith('http://')) {
+    return false;
+  }
+
+  return /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(origin);
+}
+
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) {
+    if (!origin || allowedOrigins.has(origin) || isAllowedDevOrigin(origin)) {
       return callback(null, true);
     }
 
