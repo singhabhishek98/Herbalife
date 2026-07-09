@@ -239,9 +239,10 @@ export default function App() {
     }
   };
 
-  const handleGoogleLogin = async (googleResponse) => {
+  const handleGoogleLogin = async (googleResponse, mode) => {
     const credential = googleResponse?.credential;
     const accessToken = googleResponse?.access_token;
+    const googleMode = mode || authMode;
 
     if (!credential && !accessToken) {
       return message.error('Google Sign-In failed. Please try again.');
@@ -249,7 +250,7 @@ export default function App() {
 
     try {
       await withPageLoading(async () => {
-        const response = await api.googleAuth({ credential, accessToken });
+        const response = await api.googleAuth({ credential, accessToken, mode: googleMode });
         saveStoredSession(response);
         setCurrentUser(response.user);
         setIsAuthenticated(true);
@@ -257,7 +258,7 @@ export default function App() {
 
         const memberData = await api.getMembers();
         setMembers(memberData);
-        message.success('Logged in with Google successfully');
+        message.success(googleMode === 'signup' ? 'Account created with Google successfully' : 'Logged in with Google successfully');
       });
     } catch {
       return;
@@ -454,7 +455,7 @@ function GoogleAuthButton({ isLogin, onGoogleLogin }) {
   return (
     <div className="googleLoginWrap">
       <GoogleLogin
-        onSuccess={onGoogleLogin}
+        onSuccess={(response) => onGoogleLogin(response, isLogin ? 'login' : 'signup')}
         onError={() => message.error('Google Sign-In failed. Please try again.')}
         theme="outline"
         size="large"

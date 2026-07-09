@@ -6,14 +6,24 @@ function resolveApiBaseUrl() {
   }
 
   if (typeof window !== 'undefined') {
-    const { hostname } = window.location;
+    const { hostname, origin } = window.location;
+    const isIpv4Host = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+    const isPrivateNetworkHost =
+      isIpv4Host && (
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+      );
 
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:5000/api';
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || isPrivateNetworkHost) {
+      const apiHost = hostname === 'localhost' ? 'localhost' : hostname;
+      return `http://${apiHost}:5000/api`;
     }
+
+    return `${origin}/api`;
   }
 
-  return 'https://herbalife-one.vercel.app/api';
+  return '/api';
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
